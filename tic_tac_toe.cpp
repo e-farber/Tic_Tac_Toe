@@ -6,7 +6,7 @@
 
 using namespace std;
 
-int play_tictactoe();
+int play_tictactoe(); // the tic tac toe game itself
 
 int main() {
 
@@ -99,5 +99,3 @@ int play_tictactoe() {
 
     return gameboard.check_end();
 }
-
-// g++ tic_tac_toe.cpp class_methods.cpp
