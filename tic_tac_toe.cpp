@@ -8,6 +8,7 @@ using namespace std;
 
 int play_tictactoe(); // the tic tac toe game itself
 
+
 int main() {
 
     bool replay = true;
@@ -35,6 +36,9 @@ int main() {
     return 0;
 }
 
+
+/* starts a game against a computer opponent moving optimally (minimax)
+   returns the game score (-1, 0 or 1) */
 int play_tictactoe() {
     srand(time(NULL)); // random seed
     float delay = 0.5;  // delay in seconds between text (for easier reading)
@@ -77,8 +81,8 @@ int play_tictactoe() {
         Sleep(1000*delay);
         cout << "The computer acts:\n";
         Sleep(1000*delay);
-        computerplayer.take_turn(gameboard);
-        Sleep(1000*delay);
+        computerplayer.execute_minimax(gameboard);
+        Sleep(2000*delay);
     }        
 
     Sleep(1000*delay);
