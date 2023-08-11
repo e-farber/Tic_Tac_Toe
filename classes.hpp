@@ -31,6 +31,7 @@ class GameBoard {
 
         // derived information
         void show_state();
+        void confirm_move(int const &square_number);
         int check_end();
 };
 

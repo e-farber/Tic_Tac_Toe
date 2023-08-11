@@ -70,7 +70,7 @@ std::string GameBoard::get_entry(int const &square_number) {
     return squares[square_number-1];
 }
 
-// returns amount of filled squares (int)
+// returns amount of filled squares (int value)
 int GameBoard::get_filled_squares() { 
     return filled_squares;
 }
@@ -162,6 +162,15 @@ void GameBoard::show_state() {
     std::cout << std::endl;
 }
 
+void GameBoard::confirm_move(int const &square_number) {
+    std::cout << " A mark was placed on square " << square_number << " by the ";
+    if (player_turn) {
+        std::cout << "player.\n";
+    }
+    else {
+        std::cout << "computer.\n";
+    }
+}
 
 /*
 checks if game is over and returns a score
@@ -267,12 +276,12 @@ void ComputerPlayer::random_move(GameBoard &gameboard) {
 */
 std::vector<int> ComputerPlayer::calc_best_move(GameBoard gameboard, std::vector<std::string> current_board_state, int recdep) {
     int game_score = gameboard.check_end(); // 2 if not yet over; -1, 0, 1 for game end
+    bool pl_turn = gameboard.get_player_turn();
 
     if (game_score == 2) {
         std::vector<int> empty_squares = gameboard.get_empty_squares();
         std::vector<std::vector<int>> squares_and_scores;
-        squares_and_scores.reserve(40320); /* 40320 = 8!, which is approximately the amount of moves
-        needed to be stored max. TODO Easy to optimize by exchanging 8! with (9 - filled_squares)! */
+        squares_and_scores.reserve(9 - gameboard.get_filled_squares());
 
         for (auto &empty_square_index : empty_squares) {
             GameBoard testing_board = gameboard;
@@ -283,7 +292,7 @@ std::vector<int> ComputerPlayer::calc_best_move(GameBoard gameboard, std::vector
             // debugging
             /* std::string depth(recdep*7, ' ');
             std::cout << depth;
-            if (gameboard.get_player_turn()) {
+            if (pl_turn) {
                 std::cout << "O on " << empty_square_index << std::endl;
             }
             else {
@@ -295,6 +304,15 @@ std::vector<int> ComputerPlayer::calc_best_move(GameBoard gameboard, std::vector
             int end_score = calc_best_move(testing_board, current_board_state, recdep + 1)[1];
 
             squares_and_scores.push_back({empty_square_index, end_score});
+
+            /* optimization: if end_score is already max/min, break out of for-loop;
+               in other words - if loss has already occured, stop following that path */
+            if (pl_turn && end_score == 1) {
+                break;
+            }
+            else if (!pl_turn && end_score == -1) {
+                break;
+            }
             
             // debugging
             /* std::cout << depth << "[RD " << recdep << "] Squares and scores: {";
@@ -305,16 +323,13 @@ std::vector<int> ComputerPlayer::calc_best_move(GameBoard gameboard, std::vector
             // end debugging
         }
 
-        /* TODO: possible optimization: stop following path after loss has already occured
-        and check next path instead */
-
         int best_square = squares_and_scores[0][0];
         int best_score = squares_and_scores[0][1];
         for (auto &square_and_score : squares_and_scores) {
 
-            /* player marks (default 'X') get assigned scores by minimizing
+            /* player (default 'X') tries to minimize (win is weighted -1)
             -> decide how to react by choosing maximum player score */
-            if (gameboard.get_player_turn()) {
+            if (pl_turn) {
                 if (square_and_score[1] > best_score) {
                 best_score = square_and_score[1];
                 best_square = square_and_score[0];
@@ -327,7 +342,7 @@ std::vector<int> ComputerPlayer::calc_best_move(GameBoard gameboard, std::vector
                 }
             }
 
-            /* AI marks (default 'O') get assigned scores by maximizing
+            /* AI  (default 'O') tries to maximize (win is weighted +1)
             -> decide how to react by choosing minimum AI score */
             else {
                 if (square_and_score[1] < best_score) {
@@ -358,22 +373,44 @@ std::vector<int> ComputerPlayer::calc_best_move(GameBoard gameboard, std::vector
     }
 }
 
-
-
 // calculates and executes a best possible move
 void ComputerPlayer::execute_minimax(GameBoard &gameboard) {
     std::vector<std::string> current_board_state =  gameboard.get_board_state();
+    bool pl_turn = gameboard.get_player_turn();
 
-    int square_number = calc_best_move(gameboard, current_board_state)[0];
-    gameboard.set_entry(square_number);
-    
-    // confirm by printing message
-    std::cout << " A mark was placed on square " << square_number << " by the ";
-    if (gameboard.get_player_turn()) {
-        std::cout << "player.\n";
+    if (gameboard.get_filled_squares() >= 2) {
+        int square_number = calc_best_move(gameboard, current_board_state)[0];
+        gameboard.set_entry(square_number);
+        
+        // confirm by printing message
+        gameboard.confirm_move(square_number);
     }
+
+    // hard coding first move to save computational time
     else {
-        std::cout << "computer.\n";
+        // case: player mark in middle
+        if (current_board_state[4] == "X") {
+            int corners[4] = {0, 2, 6, 8};
+            int random_number = rand() % 4;
+            gameboard.set_entry(corners[random_number] + 1); // place mark on random corner
+            gameboard.confirm_move(random_number);
+        }
+
+        // case: player mark in corner
+        else if (current_board_state[0] == "X" || current_board_state[2] == "X"
+         || current_board_state[6] == "X" || current_board_state[8] == "X") {
+            gameboard.set_entry(5); // place mark in middle
+            gameboard.confirm_move(5);
+        }
+
+        // case: player mark on edge
+        else if (current_board_state[1] == "X" || current_board_state[3] == "X") {
+            gameboard.set_entry(1); // place mark on adjacent corner
+            gameboard.confirm_move(1);
+        }  
+        else if (current_board_state[5] == "X" || current_board_state[7] == "X") {
+            gameboard.set_entry(9);
+            gameboard.confirm_move(9);
+        }
     }
-    // TODO: possible optimization: hard-code first decision (e.g. if center -> edge, if edge -> corner)
 }
