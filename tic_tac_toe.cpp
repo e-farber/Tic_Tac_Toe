@@ -1,6 +1,7 @@
 #include <iostream>
 #include <limits> // for managing invalid inputs
-#include <Windows.h> // Sleep()
+#include <chrono>
+#include <thread>
 
 #include "classes.hpp"
 
@@ -30,7 +31,6 @@ int main() {
     }
 
     std::cout << " Thank you for playing.\n\n";
-    system("pause");
     return 0;
 }
 
@@ -39,13 +39,16 @@ int main() {
    returns the game score (-1, 0 or 1) */
 int play_tictactoe() {
     srand(time(NULL)); // random seed
-    float delay = 0.5;  // delay in seconds between text (for easier reading)
+    const int64_t delay = 1;  /* delay in seconds between text (for easier reading)
+                                 note: delay is halved */
 
     GameBoard gameboard;
     // debugging
-    /* GameBoard gameboard("O", "2", "3",
+    /* 
+    GameBoard gameboard("O", "2", "3",
                         "4", "X", "6",
-                        "7", "8", "9"); */
+                        "7", "8", "9");
+    */
     // end debugging
     ComputerPlayer computerplayer;
 
@@ -56,7 +59,7 @@ int play_tictactoe() {
     */
     while (gameboard.check_end() == 2) {
         gameboard.show_state();
-        Sleep(2000*delay);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000*delay));
 
         /*
         ***player turn***
@@ -82,27 +85,28 @@ int play_tictactoe() {
         gameboard.show_state();
         
         // ***computer turn***
-        Sleep(1000*delay);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500*delay));
         std::cout << " The computer acts:\n";
-        Sleep(1000*delay);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500*delay));
         computerplayer.execute_minimax(gameboard);
-        Sleep(3000*delay);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500*delay));
     }        
 
     // print information on game end
     gameboard.show_state();
-    Sleep(1000*delay);
+    const int end_score {gameboard.check_end()};
+    std::this_thread::sleep_for(std::chrono::milliseconds(500*delay));
 
     std::cout << "\n The game is over. ";
-    if (gameboard.check_end() == -1) {
+    if (end_score == -1) {
         std::cout << "The player wins. ";
     }
-    else if (gameboard.check_end() == 0) {
+    else if (end_score == 0) {
         std::cout << "The game is a draw. ";
     }
-    else if (gameboard.check_end() == 1) {
+    else if (end_score == 1) {
         std::cout << "The computer wins. ";
     }
 
-    return gameboard.check_end();
+    return end_score;
 }

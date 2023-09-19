@@ -10,6 +10,7 @@ second: definitions for ComputerPlayer class (approx. line 240)
 */
 
 // ***constructor definition***
+// default constructor
 GameBoard::GameBoard() {
     for (int square_number = 0; square_number <= 8; square_number++) { // fill squares with
         squares[square_number] = std::to_string(square_number +1);        // numbers 1 through 9
@@ -19,6 +20,8 @@ GameBoard::GameBoard() {
     filled_squares = 0;
 }
 
+
+// parametrized constructor - manually enter game state and whether computer moves first
 GameBoard::GameBoard (std::string first, std::string second, std::string third,
                    std::string fourth, std::string fifth, std::string sixth,
                    std::string seventh, std::string eighth, std::string ninth, bool comp_starts) {
@@ -50,6 +53,7 @@ GameBoard::~GameBoard() {
 
 
 // ***method definitions***
+// returns bool gameboard.player_turn
 bool GameBoard::get_player_turn() {
     return player_turn;
 }
@@ -76,9 +80,10 @@ int GameBoard::get_filled_squares() {
 }
 
 
-// returns list of string values containing the current entries of all squares
+// returns vector of string values containing the current entries of all squares
 std::vector<std::string> GameBoard::get_board_state() {
     std::vector<std::string> current_board_state;
+    current_board_state.reserve(9);
 
     for (auto &c: squares) {
         current_board_state.push_back(c);
@@ -90,6 +95,7 @@ std::vector<std::string> GameBoard::get_board_state() {
 // returns vector of int values containing the entries (1-9) of currently empty squares (ascending order)
 std::vector<int> GameBoard::get_empty_squares() {
     std::vector<int> empty_squares;
+    empty_squares.reserve(9 - filled_squares);
 
     for (auto &c : squares) {
         if (c != "X" && c != "O") {
@@ -115,14 +121,21 @@ void GameBoard::set_entry(int const &square_number) {
         squares[square_number-1] = "O"; // O if computer acts
     }
 
-    // increment filled_squares by 1 and confirm
+    // increment filled_squares by 1
     filled_squares++;
 }
 
 
 // prints all entries in 3x3 form
 void GameBoard::show_state() {
-    system("cls"); // clear output
+    // clear output
+    #if _WIN32
+    system("cls");
+    #elif __linux__
+    system("tput reset");
+    #else
+    std::cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+    #endif
 
     if (filled_squares == 0) {
         std::cout << " Welcome!\n";
@@ -137,12 +150,13 @@ void GameBoard::show_state() {
     else {
         std::cout << " Current game state:\n";
     }
-    
+
+    std::string tenspace(10, ' ');
     for (int square_number = 0; square_number <= 8; square_number++) {
         
         // shift right by 10 spaces for easier readability
         if (square_number == 0 || square_number == 3 || square_number == 6) {
-            std::cout << "          ";
+            std::cout << tenspace;
         }
 
         // entries
@@ -150,10 +164,10 @@ void GameBoard::show_state() {
 
         // grid lines and line breaks
         if (square_number == 2 || square_number == 5) {
-            std::cout << "\n          __|___|__" << std::endl;
+            std::cout << std::endl << tenspace << "__|___|__" << std::endl;
         }
         else if (square_number == 8) {
-            std::cout << std::endl << "            |   |   \n";
+            std::cout << std::endl << tenspace << "  |   |   " << std::endl;
         }
         else {
             std::cout << " | ";
@@ -196,8 +210,8 @@ int GameBoard::check_end() {
 
     // horizontal check
     for (int square_number = 0; square_number <= 6; square_number += 3) {
-        if (squares[square_number] == squares[square_number + 1] &&
-        squares[square_number + 1] == squares[square_number + 2]) {
+        if (squares[square_number]     == squares[square_number + 1]
+         && squares[square_number + 1] == squares[square_number + 2]) {
             if (player_turn) {
                 return -1;
             }
@@ -208,8 +222,8 @@ int GameBoard::check_end() {
     }
 
     // diagonal checks
-    if ((squares[0] == squares[4] && squares[4] == squares[8]) ||
-    (squares[2] == squares[4] && squares[4] == squares[6])) {
+    if ((squares[0] == squares[4] && squares[4] == squares[8])
+     || (squares[2] == squares[4] && squares[4] == squares[6])) {
         if (player_turn) {
                 return -1;
             }
@@ -272,7 +286,7 @@ void ComputerPlayer::random_move(GameBoard &gameboard) {
 3) on each level, returns list of {square choice, end result}
 4) returns to higher level min result if end state was reached after player turn, else returns max result
 5) following the same principle, each value on one level is compared and fed back on top
-6) for the level the best move was originally to be calculated for, a list with {best square, best score} is returned
+6) for the level the best move was originally to be calculated for, a vector with {best square, best score} is returned
 */
 std::vector<int> ComputerPlayer::calc_best_move(GameBoard gameboard, std::vector<std::string> current_board_state, int recdep) {
     int game_score = gameboard.check_end(); // 2 if not yet over; -1, 0, 1 for game end
@@ -305,13 +319,11 @@ std::vector<int> ComputerPlayer::calc_best_move(GameBoard gameboard, std::vector
 
             squares_and_scores.push_back({empty_square_index, end_score});
 
-            /* optimization: if end_score is already max/min, break out of for-loop;
-               in other words - if loss has already occured, stop following that path */
-            if (pl_turn && end_score == 1) {
-                break;
-            }
-            else if (!pl_turn && end_score == -1) {
-                break;
+            /* optimization: if end_score is already max/min, skip straight to return-statement
+               no need to determine best square, since it has already been found.
+               in other words - if loss has already occured, stop following that decision tree path */
+            if ((pl_turn && end_score == 1) || (!pl_turn && end_score == -1)) {
+                return {empty_square_index, end_score};
             }
             
             // debugging
@@ -368,10 +380,11 @@ std::vector<int> ComputerPlayer::calc_best_move(GameBoard gameboard, std::vector
 
 
     else {
-        return {-13, game_score}; /* first entry (-13) doesn't matter;
+        return {666, game_score}; /* first entry (666) doesn't matter;
         in case an end state is reached, only the game_score is fed back */
     }
 }
+
 
 // calculates and executes a best possible move
 void ComputerPlayer::execute_minimax(GameBoard &gameboard) {
@@ -393,7 +406,7 @@ void ComputerPlayer::execute_minimax(GameBoard &gameboard) {
             int corners[4] = {0, 2, 6, 8};
             int random_number = rand() % 4;
             gameboard.set_entry(corners[random_number] + 1); // place mark on random corner
-            gameboard.confirm_move(random_number);
+            gameboard.confirm_move(corners[random_number] + 1);
         }
 
         // case: player mark in corner
